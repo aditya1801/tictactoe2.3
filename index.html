@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>IO Chat</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" >
+	<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+
+	<style>
+	body
+	{
+		margin-top:30px;
+
+	}
+	#messageArea{
+		display:none;
+	}
+	#table{
+		display:none;
+	}
+	#message2{
+		display:none;
+		font-size:15pt;
+		border: 0;
+		margin-bottom: 0px;
+		height:35px;
+		width:500px;
+		text-align:center;
+	}
+	#mainmessage{
+		
+		font-size:15pt;
+		border: 0;
+		margin-bottom: 0px;
+		height:35px;
+		text-align:center;
+	}
+	.square
+	{
+		height:160px;
+		width: 80px;
+		font-size:85pt;
+		text-align:center;
+	}
+	.tictable
+	{
+		width:500px;
+		
+		
+	}
+	#restart
+	{
+		display:none;
+		font-size:15pt;
+		
+	}
+	#playmultiplayerbutton
+	{
+       font-size:15pt;
+       text-align:center;
+       font:italic;
+	}
+	#playmultiplayerbutton2
+	{
+       font-size:15pt;
+       text-align:center;
+       font:italic;
+	}
+	#playsingleplayerbutton
+	{
+       font-size:15pt;
+       text-align:center;
+       font:italic;
+	}
+	#waittext
+	{
+       display:none;
+		font-size:15pt;
+		border: 0;
+		margin-bottom: 0px;
+		height:35px;
+		text-align:center;
+	}
+	#leavegamebutton
+	{
+		display:none;
+        font-size:13pt;
+
+	}
+	#cancelbutton
+	{
+		display:none;
+		 font-size:15pt;
+       text-align:center;
+	}
+</style>
+</head>
+<body onbeforeunload="leavegamefun()">
+	<br>
+	<div class ="container">
+		<textarea id="mainmessage" readonly ></textarea><a href="/login" class ="btn btn-primary" onclick="leavegamefun()">log out</a><br><br>
+		<button id="playsingleplayerbutton" onclick="playsingleplayerfun()" class ="btn btn-primary">play singleplayer</button><br><br>
+
+		<button id="playmultiplayerbutton" onclick="playmultiplayerfun()" class ="btn btn-primary">play multiplayer(online)</button><br><br>
+		<button id="playmultiplayerbutton2" onclick="playmultiplayerfun2()" class ="btn btn-primary">play multiplayer(offline)</button><br><br>
+		<textarea id="waittext" readonly>wait for another player</textarea>
+		<div id="userFormArea" class="row">
+			<div class="col-md-12">
+				<form id="userForm">
+			<div class="form-group">
+				<label>Enter username</label>
+				<input class="form-control" id="username"/>
+				<br />
+				<input type="submit" class ="btn btn-primary" value="log in" />
+			</div>
+
+		</form>
+	</div>
+</div>
+        
+
+		<div id="messageArea" class ="row">
+			<div class ="col-md-4">
+				<div class="well">
+				<h3> Online Users </h3>
+				<ul class ="list-group" id="users" ></ul>
+			</div>
+			</div>
+		
+	
+	<div class ="col-md-8">
+		<div class="chat" id="chat"></div>
+
+		<form id="messageForm">
+			<div class="form-group">
+				<label>Enter Message</label>
+				<textarea class="form-control" id="message"></textarea>
+				<br />
+				<input type="submit" class ="btn btn-primary" value="Send Message" />
+			</div>
+		</form>
+	</div>
+	</div>
+    <button id="cancelbutton" onclick="leavegamefun()" class ="btn btn-primary">cancel queue</button>
+	<textarea id="message2" readonly></textarea>
+	<table  id="table" class="tictable" border="1">
+        	<tr>
+        		<td id="1" class="square" onClick="nextmove(id)"></td>
+        		<td id="2" class="square" onClick="nextmove(id)"></td>
+        		<td id="3" class="square" onClick="nextmove(id)"></td>
+        	</tr>
+        	<tr>
+        		<td id="4" class="square" onClick="nextmove(id)"></td>
+        		<td id="5" class="square" onClick="nextmove(id)"></td>
+        		<td id="6" class="square" onClick="nextmove(id)"></td>
+        	</tr>
+        	<tr>
+        		<td id="7" class="square" onClick="nextmove(id)"></td>
+        		<td id="8" class="square" onClick="nextmove(id)"></td>
+        		<td id="9" class="square" onClick="nextmove(id)"></td>
+        	</tr>
+        </table>
+        <a href="javascript: start();" id="restart" class ="btn btn-primary">start over</a>
+        <text>    </text>
+        <button id="leavegamebutton" onClick="leavegamefun()" class ="btn btn-primary">leave game</button>
+        
+</div>
+
+	<script>
+		//console.log('gh');
+		//msg="hello";
+       // document.getElementById(message2).innerHTML("hello");
+		var socket = io.connect();
+		var player1,player2;
+		var tablename;
+		var $username=$('#username'); 
+		var $message2=$('#message2');
+		var $mainmessage=$('#mainmessage');
+		var enemyturn;
+		var xturn;
+		var currentusername;
+		var $userForm=$('#userForm');
+		var $messageForm = $('#messageForm');
+		var $waittext = $('#waittext');
+		var $playmultiplayerbutton=$('#playmultiplayerbutton');
+		var $playmultiplayerbutton2=$('#playmultiplayerbutton2');
+		var $playsingleplayerbutton=$('#playsingleplayerbutton');
+		var $leavegamebutton=$('#leavegamebutton');
+		var $cancelbutton=$('#cancelbutton');
+		var mode;
+    var $message =$('#message');
+    var $chat = $('#chat');
+    var $messageArea=$('#messageArea');
+     var $table=$('#table');
+     var $restart=$('#restart');
+    var $userFormArea=$('#userFormArea');
+        var $users=$('#users');
+     $(function(){
+       
+          $.get('http://localhost:2001/username', {}, function(data){
+           currentusername=data;
+           console.log(currentusername);
+           $username.val(currentusername);
+           console.log("check u "+currentusername+"&"+$username.val()+"*");
+            });
+
+     
+     
+          setTimeout(function() {
+     	  $mainmessage.val("Welcome "+$username.val()+" ");
+          console.log($mainmessage.val()+"%");
+          $userForm.trigger('submit');
+         }, 10);
+    
+    
+
+    
+     
+     
+          $messageForm.submit(function(e)
+         {
+     	   e.preventDefault();
+     	   console.log('sent the message'+$message.val());
+     	   socket.emit('send message',{val: $message.val(),tablename});
+     	   $message.val('');
+         });
+         socket.on('new message',function(data){
+         $chat.append('<div class="well"><strong>'+data.user+'</strong>:'+data.msg+'</div>');
+         });
+
+         $userForm.submit(function(e)
+         {
+     	   e.preventDefault();
+     	   $userFormArea.hide();
+     	   console.log("ur trigered"+$username.val()+"((");
+     	   $message.val('');
+         });
+     
+    
+         socket.on('join table',function(data){
+     	    console.log("joint the table "+data.tablename);
+            tablename=data.tablename;
+            player1=data.p1;
+            player2=data.p2;
+            console.log($username.val()+" "+player1+" "+player2+" "+data.cturn);
+            xturn=data.cturn;
+            $waittext.hide();
+            $messageArea.show();
+     	    $table.show();
+     		$message2.show();
+     		$restart.show();
+     		$leavegamebutton.show();
+     		$cancelbutton.hide();
+        
+            startgame();
+            var html='';
+            html+='<li class="list-group-item">'+player1+'</li>';
+            html+='<li class="list-group-item">'+player2+'</li>';
+            $users.html(html);
+         });
+
+
+         socket.on('renamed', function (msg) {
+           $username.val(msg);
+           console.log($username.val()+"##");
+           if($username.val()==player1)
+		   {
+			 document.turn="x";
+			 enemyturn="o";
+		   }
+		   else
+		   {
+			 document.turn="o";
+			 enemyturn="x";
+		   }
+         });
+
+	
+	 });
+		   function playmultiplayerfun()
+        {
+     	    mode=2;
+     	    $playsingleplayerbutton.hide();
+     	    $playmultiplayerbutton.hide();
+     	    $playmultiplayerbutton2.hide();
+            $waittext.show();
+            $cancelbutton.show();
+
+            setTimeout(function() {}, 10);
+
+     	    socket.emit('new user',$username.val(),function(data){
+     		   if(data)
+     		    {
+     			
+     			
+     		    }
+     	    });
+     	    $message.val('');
+        }
+           function playsingleplayerfun()
+        {
+     	    mode=1;
+     	    $playsingleplayerbutton.hide();
+     	    $playmultiplayerbutton.hide();
+     	    $playmultiplayerbutton2.hide();
+     	    $table.show();
+     	    $messageArea.show();
+     	    $message2.show();
+     		$restart.show();
+     		$leavegamebutton.show();
+     		xturn=1;
+     		player1=$username.val();
+     		player2="bot";
+     		startgame();
+     		var html='';
+            html+='<li class="list-group-item">'+player1+'</li>';
+            html+='<li class="list-group-item">'+player2+'</li>';
+            $users.html(html);
+        }
+           function playmultiplayerfun2()
+        {
+     	    mode=3;
+     	    $playsingleplayerbutton.hide();
+     	    $playmultiplayerbutton.hide();
+     	    $playmultiplayerbutton2.hide();
+     	    $table.show();
+     	    $messageArea.show();
+     		$message2.show();
+     		$restart.show();
+     		$leavegamebutton.show();
+     		xturn=1;
+     		player1="player=>X";
+     		player2="player=>O";
+     		startgame();
+     		var html='';
+            html+='<li class="list-group-item">'+player1+'</li>';
+            html+='<li class="list-group-item">'+player2+'</li>';
+            $users.html(html);
+        }
+           function leavegamefun()
+        {
+     	    if(mode==1||mode==3)
+     	     {
+     		   leavegamefun2();
+     	     }
+     	    if(mode==2)
+     	     {
+     	       leavegamefun2();
+     	       socket.emit('leave game',{tablename});
+             }
+        }
+
+           socket.on('leave the game',function(data)
+         {
+          leavegamefun2();
+         });
+           socket.on('opponent closed browser',function(data)
+         {
+          leavegamefun2();
+         });
+           function leavegamefun2()
+         {
+     	   setTimeout(function() {}, 100);
+     	   $messageArea.hide();
+     		 $table.hide();
+     		  $message2.hide();
+     		  $restart.hide();
+     		  $cancelbutton.hide();
+     		  $waittext.hide();
+     	    $playmultiplayerbutton.show();
+     	    $playsingleplayerbutton.show();
+     	    $playmultiplayerbutton2.show();
+     	    $leavegamebutton.hide();
+         }
+     
+
+		   function messagechange()
+		 {
+			console.log(flag+"$$");
+			if(flag==1)
+		   {
+			 $message2.val("yours turn "+document.turn);
+		   }
+		    else
+		   {
+		 	 $message2.val("opponent turn "+document.turn);
+		   }
+
+		   if(mode==3)
+		   {
+			 $message2.val("player X turn");
+		   }
+		}
+		
+		  function start()
+		 {
+			console.log('it started yes');
+			if(mode==2)
+             socket.emit("start again",{tablename});
+
+            if(mode==1||mode==3)
+             	startgame();
+		 }
+		 socket.on('pok',function(data){
+			console.log("wooowowowow");
+            startgame();
+		 });
+		 function startgame()
+	    {
+		
+		  if((xturn==1&&$username.val()==player1)||(player1=="player=>X"))
+        	 flag=1;
+          else
+        	 flag=0;
+		  if(($username.val()==player1)||(player1=="player=>X"))
+		   {
+			document.turn="x";
+			enemyturn="o";
+		   }
+		  else
+		  {
+			document.turn="o";
+			enemyturn="x";
+		  }
+        for(var i=1;i<=9;i++)
+        {
+        	clearbox(i);
+        }
+		messagechange();
+		
+		
+	}
+
+	function nextmove(id)
+	{
+		
+        if(flag==1)
+        {
+        	flag=0;
+		console.log(id);
+		var x = document.getElementById(id);
+		if(x.innerText=="x"||x.innerText=="o")
+			return;
+       x.innerText=document.turn;
+       console.log(id+" "+document.turn+" "+$username.val()+"#"+x.innerText+"^");
+		 if(mode==2)
+		socket.emit('make a move',{id,turn:document.turn,tablename,playername:$username.val()});
+	   if(mode==1)
+	      {
+	      	console.log("playing singleplayer");
+             if(checkforwinner(document.turn))
+               {
+
+          	console.log("single winner is found");
+         	$message2.val("you win");
+               }
+               else
+               	if(availablespots()==0)
+               	{
+               		$message2.val("draw");
+               	}
+               else
+               {
+               	messagechange();
+               	if(availablespots()==8)
+               	firstmove();
+                else
+               	botmove();
+               }
+          }
+          if(mode==3)
+          {
+          	 if(checkforwinner(document.turn))
+               {
+
+         // 	console.log("single winner is found");
+             if(document.turn=="x")
+                  $message2.val("player=>X won");
+              else
+              	  $message2.val("player=>O won");
+               }
+               else
+               	if(availablespots()==0)
+               	{
+               		$message2.val("draw");
+               	}
+               else
+               {
+               	if(document.turn=="x")
+               		{document.turn="o";
+               	     $message2.val("player O turn");
+                    }
+               	else
+               		{document.turn="x";
+               	     $message2.val("player X turn");
+               	     }
+               	flag=1;
+               }
+          }
+		}     
+		    
+      
+	}
+	function firstmove()
+	{
+       if(getbox(1)==document.turn)
+       {
+       	setbox(5,enemyturn);
+       }
+       else
+       	if(getbox(2)==document.turn)
+       {
+       	setbox(1,enemyturn);
+       }
+       else
+       	if(getbox(3)==document.turn)
+       {
+       	setbox(5,enemyturn);
+       }
+       else
+       	if(getbox(4)==document.turn)
+       {
+       	setbox(1,enemyturn);
+       }
+       else
+       	if(getbox(5)==document.turn)
+       {
+       	setbox(1,enemyturn);
+       }
+       else
+       	if(getbox(6)==document.turn)
+       {
+       	setbox(3,enemyturn);
+       }
+       else
+       	if(getbox(7)==document.turn)
+       {
+       	setbox(5,enemyturn);
+       }
+       else
+       	if(getbox(8)==document.turn)
+       {
+       	setbox(2,enemyturn);
+       }
+       else
+       if(getbox(9)==document.turn)
+       {
+       	setbox(5,enemyturn);
+       }
+      // setbox(index,enemyturn);
+		if(checkforwinner(enemyturn))
+               {
+
+          	console.log("bot winner is found");
+         	$message2.val("you lose");
+               }
+               else
+               	if(availablespots()==0)
+               	{
+               		$message2.val("draw");
+               	}
+               else
+               {
+               	flag=1;
+               	messagechange();
+               }
+
+	}
+	function botmove()
+	{
+       var index=minimax(enemyturn).index;
+       console.log(index+"%%%%%");
+       setbox(index,enemyturn);
+		if(checkforwinner(enemyturn))
+               {
+
+          	console.log("bot winner is found");
+         	$message2.val("you lose");
+               }
+               else
+               	if(availablespots()==0)
+               	{
+               		$message2.val("draw");
+               	}
+               else
+               {
+               	flag=1;
+               	messagechange();
+               }
+
+	}
+    function availablespots()
+    {
+    	var count=9;
+    	for(var i=1;i<=9;i++)
+    	{
+          if(getbox(i)=='x'||getbox(i)=='o')
+          	count--;
+    	}
+    	//console.log(count+"!!");
+    	return count;
+    }
+    function bestmove2()
+    {
+    	var best,value=10000;
+    	for(var i=1;i<=9;i++)
+    	{
+    		if(getbox(i)=="")
+    		{
+    			setbox(i,enemyturn);
+
+    			var x=minimax(document.turn)
+              if(x<value)
+              {
+              	best=i;
+              	value=x;
+              }
+              console.log('placed o at '+i+"got value "+value+"the best=>"+best);
+               clearbox(i);
+    		}
+    	}
+    	return best;
+    }
+	function minimax(turn) {
+	
+    var l=availablespots();
+	if (checkforwinner(document.turn)) {
+		return {score: -10};
+	} else if (checkforwinner(enemyturn)) {
+		return {score: 10};
+	} else if (l == 0) {
+		return {score: 0};
+	}
+	var moves = [];
+	for (var i = 1; i <=9; i++) {
+		if(getbox(i)=="")
+		{
+		var move = {};
+		move.index=i;
+		setbox(i,turn);
+
+		if (turn==enemyturn) {
+			var result = minimax(document.turn);
+			move.score = result.score;
+		} else {
+			var result = minimax(enemyturn);
+			move.score = result.score;
+		}
+
+		clearbox(i);
+
+		moves.push(move);
+	    }
+	}
+
+	var bestMove;
+	if(turn==enemyturn) {
+		var bestScore = -10000;
+		for(var i = 0; i < moves.length; i++) {
+			if (moves[i].score > bestScore) {
+				bestScore = moves[i].score;
+				bestMove = i;
+			}
+		}
+	} else {
+		var bestScore = 10000;
+		for(var i = 0; i < moves.length; i++) {
+			if (moves[i].score < bestScore) {
+				bestScore = moves[i].score;
+				bestMove = i;
+			}
+		}
+	}
+
+	return moves[bestMove];
+}
+	function checkforwinner(move)
+	{
+		var result=false;
+		if( checkrow(1,2,3,move)||
+			checkrow(4,5,6,move)||
+			checkrow(7,8,9,move)||
+			checkrow(1,4,7,move)||
+			checkrow(2,5,8,move)||
+			checkrow(3,6,9,move)||
+		  checkrow(1,5,9,move)||
+		  checkrow(3,5,7,move) )
+        result=true;
+        return result;
+
+	}
+	function checkrow(a,b,c,move)
+	{
+		var result=false;
+		if(getbox(a)==move&&getbox(b)==move&&getbox(c)==move)
+		{
+			result=true;
+		}
+		return result;
+	}
+	function getbox(number)
+	{
+		return document.getElementById(number).innerText;
+	}
+	function setbox(number,turn)
+	{
+		document.getElementById(number).innerText=turn;
+	}
+	function clearbox(number)
+	{
+		document.getElementById(number).innerText="";
+	}
+	socket.on('new move',function(data)
+	{
+		console.log(data.id+" "+data.turn+" "+data.playername+" "+$username.val()+"%");
+        var x = document.getElementById(data.id);
+       x.innerText=data.turn;
+       if(checkforwinner(data.turn))
+       {
+       	console.log("winner is found");
+       	
+       	
+       	 if(data.playername==$username.val())
+       	{$message2.val("you win");
+        socket.emit("new record",{msg:$message2.val(),user:$username.val()});
+        }
+       else
+       {
+       	$message2.val("you lose");
+        socket.emit("new record",{msg:$message2.val(),user:$username.val()});
+       }
+       }
+       else 
+       	if(availablespots()==0)
+       	{
+       		$message2.val("draw");
+           socket.emit("new record",{msg:$message2.val(),user:$username.val()});
+       	}
+       else {if(data.playername!=$username.val())
+       	       flag=1;
+       messagechange();}
+
+        
+	});
+	
+</script>
+</body>
+
+</html>

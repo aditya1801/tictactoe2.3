@@ -1,0 +1,18 @@
+{
+  "name": "iochat",
+  "version": "1.0.0",
+  "description": "Simple chat app",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "brad traversy",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "express": "*",
+    "mysql": "^2.15.0",
+    "mysqli": "^2.2.2",
+    "socket.io": "*"
+  }
+}
